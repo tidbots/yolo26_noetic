@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>yolo26_ros1</name>
+  <version>0.1.0</version>
+  <description>YOLO26 (Ultralytics) ROS1 node subscribing to OpenNI2 RGB images and publishing annotated images.</description>
+
+  <maintainer email="you@example.com">you</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- runtime deps -->
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+
+  <!-- For camera bringup -->
+  <exec_depend>openni2_launch</exec_depend>
+
+</package>
+

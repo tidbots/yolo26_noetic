@@ -1,0 +1,28 @@
+services:
+  xtion_yolo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xtion_yolo26_ros1
+    network_mode: host
+
+    # まずは確実に
+    privileged: true
+
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      # ここを実ファイルに。無い場合は ultralytics がDLしようとする
+      - YOLO_MODEL=/workspace/weights/yolo26n.pt
+      - YOLO_CONF=0.25
+      - YOLO_DEVICE=0   # GPU:0 / CPUなら "cpu" / autoなら空
+      - PYTHONPATH=/opt/venv/lib/python3.8/site-packages
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./weights:/workspace/weights:rw
+      - ./runs:/workspace/runs:rw
+
+    gpus: all
+    restart: unless-stopped
+
