@@ -20,8 +20,6 @@ ENV PATH="/opt/venv/bin:${PATH}"
 # catkin workspace
 WORKDIR /catkin_ws
 COPY catkin_ws/src /catkin_ws/src
-COPY entrypoint.sh /
-
 RUN /bin/bash -lc "source /opt/ros/noetic/setup.bash && \
   export PATH=/opt/ros/noetic/bin:/usr/bin:/bin:/usr/sbin:/sbin && \
   catkin_make"
@@ -38,6 +36,7 @@ if [ -f /opt/venv/bin/activate ]; then
 fi
 EOF
 
+COPY entrypoint.sh 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]
 
