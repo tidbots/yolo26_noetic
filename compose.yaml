@@ -8,8 +8,15 @@ services:
 
     # まずは確実に
     privileged: true
-
+    # Compose v2系（docker compose）ならこれでGPUが効きます
+    gpus: all
+    
     environment:
+      - ROS_MASTER_URI=http://localhost:11311
+      - ROS_IP=127.0.0.1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       # ここを実ファイルに。無い場合は ultralytics がDLしようとする
@@ -22,7 +29,10 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./weights:/workspace/weights:rw
       - ./runs:/workspace/runs:rw
+      - /dev:/dev
 
-    gpus: all
+    command: >
+      roslaunch yolo26_ros yolo26_usb.launch
+
     restart: unless-stopped
 
