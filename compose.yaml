@@ -1,9 +1,9 @@
 services:
-  xtion_yolo:
+  yolo26:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: xtion_yolo26_ros1
+    container_name: yolo26_ros1
     network_mode: host
 
     # まずは確実に
