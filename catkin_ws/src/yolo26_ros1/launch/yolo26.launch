@@ -3,7 +3,7 @@
   <arg name="model" default="$(optenv YOLO_MODEL yolo26n.pt)"/>
   <node pkg="yolo26_ros1" type="yolo26_ros1_node.py" name="yolo26_ros1_node" output="screen">
     <param name="model" value="$(arg model)"/>
-    <param name="image" value="/camera/rgb/image_raw"/>
+    <param name="image" value="/camera/image_preprocessed"/>
     <param name="out_image" value="/yolo/image"/>
 
     <!-- 推奨：ホストの weights を読む（存在するなら） -->
