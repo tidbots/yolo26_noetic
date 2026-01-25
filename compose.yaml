@@ -30,10 +30,14 @@ services:
       - ./weights:/workspace/weights:rw
       - ./runs:/workspace/runs:rw
       - /dev:/dev
+    command:
+      [
+       "/bin/bash", "-lc", "source /opt/ros/noetic/setup.bash && source /catkin_ws/devel/setup.bash && roslaunch yolo26_ros1 yolo26.launch"]
 
-    command: >
-      roslaunch yolo26_ros1 yolo26.launch
-
-
+#    command:
+#      [  
+#       "bash","-lc",
+#        "source /opt/ros/noetic/setup.bash && roslaunch yolo26_ros1 yolo26.launch"
+#      ]
     restart: unless-stopped
 
