@@ -32,7 +32,8 @@ services:
       - /dev:/dev
 
     command: >
-      roslaunch yolo26_ros yolo26_usb.launch
+      roslaunch yolo26_ros1 yolo26.launch
+
 
     restart: unless-stopped
 
