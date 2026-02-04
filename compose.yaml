@@ -1,38 +1,64 @@
 services:
-  yolo26:
+  yolo26_ros1:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: yolo26_ros1
     network_mode: host
-
-    # まずは確実に
+    ipc: host                 # PyTorch系で安定しやすい
     privileged: true
-    # Compose v2系（docker compose）ならこれでGPUが効きます
     gpus: all
-    
+
     environment:
       - ROS_MASTER_URI=http://localhost:11311
       - ROS_IP=127.0.0.1
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
-
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
-      # ここを実ファイルに。無い場合は ultralytics がDLしようとする
-      - YOLO_MODEL=/workspace/weights/yolo26n.pt
+      - YOLO_MODEL=/models/best.pt
       - YOLO_CONF=0.25
-      - YOLO_DEVICE=0   # GPU:0 / CPUなら "cpu" / autoなら空
+      - YOLO_DEVICE=0
       - PYTHONPATH=/opt/venv/lib/python3.8/site-packages
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ./weights:/workspace/weights:rw
-      - ./runs:/workspace/runs:rw
+      - ./models:/models:ro
+      - ./catkin_ws:/catkin_ws:rw
       - /dev:/dev
-    command:
-      [
-         "/bin/bash", "-lc", "source /opt/ros/noetic/setup.bash && source /catkin_ws/devel/setup.bash && roslaunch yolo26_ros1 yolo26.launch"
-      ]
+
+    command: >
+      bash -lc
+      "roslaunch yolo26_ros1 yolo26.launch
+       model:=/models/best.pt
+       image:=/camera/image_raw
+       detections:=/yolo26/detections
+       debug_image:=/yolo26/debug_image
+       classes_yaml:=/models/classes.yaml
+       device:=0
+       conf:=0.25
+       iou:=0.45
+       rate:=15.0
+       publish_debug:=true
+       transport:=raw
+       tracking:=false"
+    profiles: ["yolo"]
     restart: unless-stopped
 
+  # オプション：USBカメラを同じcomposeで立てたい場合
+  usb_cam:
+    image: osrf/ros:noetic-desktop-full
+    container_name: usb_cam
+    network_mode: host
+    privileged: true
+    devices:
+      - /dev/video0:/dev/video0
+    environment:
+      - ROS_MASTER_URI=http://localhost:11311
+      - ROS_IP=127.0.0.1
+    command: >
+      bash -lc
+      "apt-get update && apt-get install -y --no-install-recommends ros-noetic-usb-cam &&
+       source /opt/ros/noetic/setup.bash &&
+       rosrun usb_cam usb_cam_node _video_device:=/dev/video0 _image_width:=640 _image_height:=480 _pixel_format:=mjpeg"
+    profiles: ["webcam"]

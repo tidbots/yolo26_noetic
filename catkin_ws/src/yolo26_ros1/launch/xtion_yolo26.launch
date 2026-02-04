@@ -2,18 +2,8 @@
   <!-- Xtion Pro Live via OpenNI2 -->
   <include file="$(find openni2_launch)/launch/openni2.launch" />
 
-  <!-- YOLO -->
-  <arg name="model" default="$(optenv YOLO_MODEL yolo26n.pt)"/>
-  <node pkg="yolo26_ros1" type="yolo26_ros1_node.py" name="yolo26_ros1_node" output="screen">
-    <param name="model" value="$(arg model)"/>
-    <param name="image" value="/camera/rgb/image_raw"/>
-    <param name="out_image" value="/yolo/image"/>
-
-    <!-- 推奨：ホストの weights を読む（存在するなら） -->
-    <!-- 例: /workspace/weights/yolo26n.pt -->
-    <param name="model" value="$(env YOLO_MODEL)"/>
-    <param name="conf" value="$(env YOLO_CONF)"/>
-    <param name="device" value="$(env YOLO_DEVICE)"/>
-  </node>
+  <!-- YOLO with tracking support -->
+  <include file="$(find yolo26_ros1)/launch/yolo26.launch">
+    <arg name="image" value="/camera/rgb/image_raw"/>
+  </include>
 </launch>
-

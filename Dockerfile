@@ -6,14 +6,16 @@ RUN apt-get update && apt-get install -y \
     ros-noetic-openni2-launch \
     ros-noetic-image-transport \
     ros-noetic-cv-bridge \
-    python3-venv python3-pip \
+    ros-noetic-vision-msgs \
+    ros-noetic-usb-cam \
+    python3-venv python3-pip python3-yaml \
     libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # venv + ultralytics（psutil衝突回避）
 RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/python -m pip install -U pip && \
-    /opt/venv/bin/python -m pip install -U ultralytics opencv-python
+    /opt/venv/bin/python -m pip install -U ultralytics opencv-python pyyaml
 
 ENV PATH="/opt/venv/bin:${PATH}"
 
@@ -36,9 +38,7 @@ if [ -f /opt/venv/bin/activate ]; then
 fi
 EOF
 
-COPY entrypoint.sh 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bash"]
-
-#CMD ["/bin/bash", "-lc", "source /opt/ros/noetic/setup.bash && source /catkin_ws/devel/setup.bash && roslaunch yolo26_ros1 yolo26.launch"]
-

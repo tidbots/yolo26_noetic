@@ -1,15 +1,63 @@
 <launch>
-  <!-- YOLO -->
-  <arg name="model" default="$(optenv YOLO_MODEL yolo26n.pt)"/>
-  <node pkg="yolo26_ros1" type="yolo26_ros1_node.py" name="yolo26_ros1_node" output="screen">
-    <param name="model" value="$(arg model)"/>
-    <param name="image" value="/camera/image_preprocessed"/>
-    <param name="out_image" value="/yolo/image"/>
+  <!-- ======== Arguments ======== -->
+  <!-- Model -->
+  <arg name="model" default="$(optenv YOLO_MODEL )"/>
+  <arg name="device" default="$(optenv YOLO_DEVICE 0)"/>
+  <arg name="conf" default="$(optenv YOLO_CONF 0.25)"/>
+  <arg name="iou" default="0.45"/>
+  <arg name="max_det" default="300"/>
+  <arg name="half" default="false"/>
 
-    <!-- 推奨：ホストの weights を読む（存在するなら） -->
-    <!-- 例: /workspace/weights/yolo26n.pt -->
-    <param name="model" value="$(env YOLO_MODEL)"/>
-    <param name="conf" value="$(env YOLO_CONF)"/>
-    <param name="device" value="$(env YOLO_DEVICE)"/>
+  <!-- I/O -->
+  <arg name="image" default="/camera/image_raw"/>
+  <arg name="detections" default="/yolo26/detections"/>
+  <arg name="debug_image" default="/yolo26/debug_image"/>
+  <arg name="transport" default="raw"/>
+  <arg name="publish_debug" default="true"/>
+
+  <!-- Labels -->
+  <arg name="classes_yaml" default=""/>
+  <arg name="use_class_names" default="true"/>
+
+  <!-- Performance -->
+  <arg name="rate" default="15.0"/>
+
+  <!-- Tracking -->
+  <arg name="tracking" default="false"/>
+  <arg name="tracker" default="bytetrack.yaml"/>
+  <arg name="smoothing" default="15"/>
+  <arg name="appear_frames" default="3"/>
+  <arg name="disappear_frames" default="5"/>
+
+  <!-- ======== YOLO Node ======== -->
+  <node pkg="yolo26_ros1" type="yolo26_ros1_node.py" name="yolo26_ros1_node" output="screen">
+    <!-- Model -->
+    <param name="model_path" value="$(arg model)"/>
+    <param name="device" value="$(arg device)"/>
+    <param name="conf_thres" value="$(arg conf)"/>
+    <param name="iou_thres" value="$(arg iou)"/>
+    <param name="max_det" value="$(arg max_det)"/>
+    <param name="half" value="$(arg half)"/>
+
+    <!-- I/O -->
+    <param name="image_topic" value="$(arg image)"/>
+    <param name="detections_topic" value="$(arg detections)"/>
+    <param name="debug_image_topic" value="$(arg debug_image)"/>
+    <param name="image_transport" value="$(arg transport)"/>
+    <param name="publish_debug_image" value="$(arg publish_debug)"/>
+
+    <!-- Labels -->
+    <param name="classes_yaml" value="$(arg classes_yaml)"/>
+    <param name="use_class_names" value="$(arg use_class_names)"/>
+
+    <!-- Performance -->
+    <param name="process_rate_hz" value="$(arg rate)"/>
+
+    <!-- Tracking -->
+    <param name="enable_tracking" value="$(arg tracking)"/>
+    <param name="tracker" value="$(arg tracker)"/>
+    <param name="smoothing_window" value="$(arg smoothing)"/>
+    <param name="appear_frames" value="$(arg appear_frames)"/>
+    <param name="disappear_frames" value="$(arg disappear_frames)"/>
   </node>
 </launch>

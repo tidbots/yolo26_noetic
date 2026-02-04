@@ -1,24 +1,21 @@
 <launch>
-   <!-- usb_cam -->
+  <!-- Arguments -->
+  <arg name="video_device" default="/dev/video0"/>
+  <arg name="image_width" default="640"/>
+  <arg name="image_height" default="480"/>
+  <arg name="pixel_format" default="mjpeg"/>
+
+  <!-- USB Camera -->
   <node pkg="usb_cam" type="usb_cam_node" name="usb_cam" output="screen">
-    <param name="video_device" value="/dev/video0"/>
-    <param name="image_width"  value="640"/>
-    <param name="image_height" value="480"/>
-    <param name="pixel_format" value="mjpeg"/>
+    <param name="video_device" value="$(arg video_device)"/>
+    <param name="image_width" value="$(arg image_width)"/>
+    <param name="image_height" value="$(arg image_height)"/>
+    <param name="pixel_format" value="$(arg pixel_format)"/>
     <param name="camera_frame_id" value="usb_cam"/>
   </node>
 
-<!-- YOLO -->
-  <arg name="model" default="$(optenv YOLO_MODEL yolo26n.pt)"/>
-  <node pkg="yolo26_ros1" type="yolo26_ros1_node.py" name="yolo26_ros1_node" output="screen">
-    <param name="model" value="$(arg model)"/>
-    <param name="image" value="/camera/image_preprocessed"/>
-    <param name="out_image" value="/yolo/image"/>
-
-    <!-- 推奨：ホストの weights を読む（存在するなら） -->
-    <!-- 例: /workspace/weights/yolo26n.pt -->
-    <param name="model" value="$(env YOLO_MODEL)"/>
-    <param name="conf" value="$(env YOLO_CONF)"/>
-    <param name="device" value="$(env YOLO_DEVICE)"/>
-  </node>
+  <!-- YOLO with tracking support -->
+  <include file="$(find yolo26_ros1)/launch/yolo26.launch">
+    <arg name="image" value="/usb_cam/image_raw"/>
+  </include>
 </launch>
