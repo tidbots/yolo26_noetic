@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: yolo26_ros1
     network_mode: host
-    ipc: host                 # PyTorch系で安定しやすい
+    ipc: host
     privileged: true
     gpus: all
 
@@ -16,7 +16,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
-      - YOLO_MODEL=/models/best.pt
+      - YOLO_MODEL=/models/yolo26n.pt
       - YOLO_CONF=0.25
       - YOLO_DEVICE=0
       - PYTHONPATH=/opt/venv/lib/python3.8/site-packages
@@ -24,24 +24,13 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./models:/models:ro
-      - ./catkin_ws:/catkin_ws:rw
       - /dev:/dev
 
-    command: >
-      bash -lc
-      "roslaunch yolo26_ros1 yolo26.launch
-       model:=/models/best.pt
-       image:=/camera/image_raw
-       detections:=/yolo26/detections
-       debug_image:=/yolo26/debug_image
-       classes_yaml:=/models/classes.yaml
-       device:=0
-       conf:=0.25
-       iou:=0.45
-       rate:=15.0
-       publish_debug:=true
-       transport:=raw
-       tracking:=false"
+    command:
+      [
+        "/bin/bash", "-lc",
+        "roslaunch yolo26_ros1 yolo26.launch model:=/models/yolo26n.pt image:=/camera/image_raw detections:=/yolo26/detections debug_image:=/yolo26/debug_image classes_yaml:=/models/classes.yaml device:=0 conf:=0.25 iou:=0.45 rate:=15.0 publish_debug:=true transport:=raw tracking:=false"
+      ]
     profiles: ["yolo"]
     restart: unless-stopped
 
@@ -56,9 +45,9 @@ services:
     environment:
       - ROS_MASTER_URI=http://localhost:11311
       - ROS_IP=127.0.0.1
-    command: >
-      bash -lc
-      "apt-get update && apt-get install -y --no-install-recommends ros-noetic-usb-cam &&
-       source /opt/ros/noetic/setup.bash &&
-       rosrun usb_cam usb_cam_node _video_device:=/dev/video0 _image_width:=640 _image_height:=480 _pixel_format:=mjpeg"
+    command:
+      [
+        "/bin/bash", "-lc",
+        "apt-get update && apt-get install -y --no-install-recommends ros-noetic-usb-cam && source /opt/ros/noetic/setup.bash && rosrun usb_cam usb_cam_node _video_device:=/dev/video0 _image_width:=640 _image_height:=480 _pixel_format:=mjpeg"
+      ]
     profiles: ["webcam"]
