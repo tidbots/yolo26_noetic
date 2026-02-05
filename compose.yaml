@@ -1,12 +1,19 @@
 # YOLO26 ROS1 Noetic - Docker Compose
 #
 # 使用方法:
+#   === ROSトピック入力（外部カメラノードが必要） ===
 #   docker compose --profile yolo up                    # 基本（トラッキングなし）
 #   docker compose --profile yolo-tracking up           # トラッキング有効
-#   docker compose --profile yolo-display up            # OpenCV表示（デバッグ用）
-#   docker compose --profile yolo-tracking-display up   # トラッキング + OpenCV表示
 #
-# USBカメラと一緒に使う場合:
+#   === 直接カメラキャプチャ（usb_cam不要） ===
+#   docker compose --profile yolo-direct up             # トラッキングなし
+#   docker compose --profile yolo-tracking-direct up    # トラッキング有効
+#
+#   === OpenCV表示 + 直接カメラキャプチャ（デバッグ用、要xhost） ===
+#   docker compose --profile yolo-display up            # トラッキングなし
+#   docker compose --profile yolo-tracking-display up   # トラッキング有効
+#
+# USBカメラノードと一緒に使う場合（カメラによっては動作しない）:
 #   docker compose --profile yolo --profile webcam up
 #   docker compose --profile yolo-tracking --profile webcam up
 
@@ -74,6 +81,41 @@ services:
         appear_frames:=3
         disappear_frames:=5
     profiles: ["yolo-tracking"]
+
+  # 直接カメラキャプチャモード（トラッキングなし、表示なし）
+  yolo26_ros1_direct:
+    <<: *yolo-common
+    container_name: yolo26_ros1_direct
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+        roslaunch yolo26_ros1 yolo26.launch
+        model:=/models/yolo26n.pt
+        direct_camera:=true
+        camera_width:=1280
+        camera_height:=720
+        tracking:=false
+    profiles: ["yolo-direct"]
+
+  # 直接カメラキャプチャ + トラッキングモード（表示なし）
+  yolo26_ros1_tracking_direct:
+    <<: *yolo-common
+    container_name: yolo26_ros1_tracking_direct
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+        roslaunch yolo26_ros1 yolo26.launch
+        model:=/models/yolo26n.pt
+        direct_camera:=true
+        camera_width:=1280
+        camera_height:=720
+        tracking:=true
+        smoothing:=15
+        appear_frames:=3
+        disappear_frames:=5
+    profiles: ["yolo-tracking-direct"]
 
   # OpenCV表示モード（デバッグ用、直接カメラキャプチャ）
   yolo26_ros1_display:
