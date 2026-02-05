@@ -1,42 +1,118 @@
+# YOLO26 ROS1 Noetic - Docker Compose
+#
+# 使用方法:
+#   docker compose --profile yolo up                    # 基本（トラッキングなし）
+#   docker compose --profile yolo-tracking up           # トラッキング有効
+#   docker compose --profile yolo-display up            # OpenCV表示（デバッグ用）
+#   docker compose --profile yolo-tracking-display up   # トラッキング + OpenCV表示
+#
+# USBカメラと一緒に使う場合:
+#   docker compose --profile yolo --profile webcam up
+#   docker compose --profile yolo-tracking --profile webcam up
+
+x-yolo-common: &yolo-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  network_mode: host
+  ipc: host
+  privileged: true
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+  environment:
+    - ROS_MASTER_URI=http://localhost:11311
+    - ROS_IP=127.0.0.1
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+    - DISPLAY=${DISPLAY}
+    - QT_X11_NO_MITSHM=1
+    - QT_QPA_PLATFORM=xcb
+    - XAUTHORITY=${XAUTHORITY}
+    - YOLO_MODEL=/models/yolo26n.pt
+    - YOLO_CONF=0.25
+    - YOLO_DEVICE=0
+    - PYTHONPATH=/opt/venv/lib/python3.8/site-packages
+  volumes:
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - ./models:/models:ro
+    - /dev:/dev
+  restart: unless-stopped
+
 services:
+  # 基本モード（トラッキングなし）
   yolo26_ros1:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    <<: *yolo-common
     container_name: yolo26_ros1
-    network_mode: host
-    ipc: host
-    privileged: true
-    gpus: all
-
-    environment:
-      - ROS_MASTER_URI=http://localhost:11311
-      - ROS_IP=127.0.0.1
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
-      - DISPLAY=${DISPLAY}
-      - QT_X11_NO_MITSHM=1
-      - QT_QPA_PLATFORM=xcb
-      - XAUTHORITY=${XAUTHORITY}
-      - YOLO_MODEL=/models/yolo26n.pt
-      - YOLO_CONF=0.25
-      - YOLO_DEVICE=0
-      - PYTHONPATH=/opt/venv/lib/python3.8/site-packages
-
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ./models:/models:ro
-      - /dev:/dev
-
     command:
-      [
-        "/bin/bash", "-lc",
-        "roslaunch yolo26_ros1 yolo26.launch model:=/models/yolo26n.pt image:=/camera/image_raw detections:=/yolo26/detections debug_image:=/yolo26/debug_image classes_yaml:=/models/classes.yaml device:=0 conf:=0.25 iou:=0.45 rate:=15.0 publish_debug:=true transport:=raw tracking:=false"
-      ]
+      - /bin/bash
+      - -lc
+      - >-
+        roslaunch yolo26_ros1 yolo26.launch
+        model:=/models/yolo26n.pt
+        image:=/camera/image_raw
+        tracking:=false
     profiles: ["yolo"]
-    restart: unless-stopped
 
-  # オプション：USBカメラを同じcomposeで立てたい場合
+  # トラッキング有効モード
+  yolo26_ros1_tracking:
+    <<: *yolo-common
+    container_name: yolo26_ros1_tracking
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+        roslaunch yolo26_ros1 yolo26.launch
+        model:=/models/yolo26n.pt
+        image:=/camera/image_raw
+        tracking:=true
+        smoothing:=15
+        appear_frames:=3
+        disappear_frames:=5
+    profiles: ["yolo-tracking"]
+
+  # OpenCV表示モード（デバッグ用、直接カメラキャプチャ）
+  yolo26_ros1_display:
+    <<: *yolo-common
+    container_name: yolo26_ros1_display
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+        roslaunch yolo26_ros1 yolo26.launch
+        model:=/models/yolo26n.pt
+        cv_display:=true
+        direct_camera:=true
+        camera_width:=1280
+        camera_height:=720
+        tracking:=false
+    profiles: ["yolo-display"]
+
+  # トラッキング + OpenCV表示モード
+  yolo26_ros1_tracking_display:
+    <<: *yolo-common
+    container_name: yolo26_ros1_tracking_display
+    command:
+      - /bin/bash
+      - -lc
+      - >-
+        roslaunch yolo26_ros1 yolo26.launch
+        model:=/models/yolo26n.pt
+        cv_display:=true
+        direct_camera:=true
+        camera_width:=1280
+        camera_height:=720
+        tracking:=true
+        smoothing:=15
+        appear_frames:=3
+        disappear_frames:=5
+    profiles: ["yolo-tracking-display"]
+
+  # USBカメラノード
   usb_cam:
     image: osrf/ros:noetic-desktop-full
     container_name: usb_cam
@@ -48,8 +124,15 @@ services:
       - ROS_MASTER_URI=http://localhost:11311
       - ROS_IP=127.0.0.1
     command:
-      [
-        "/bin/bash", "-lc",
-        "apt-get update && apt-get install -y --no-install-recommends ros-noetic-usb-cam && source /opt/ros/noetic/setup.bash && rosrun usb_cam usb_cam_node _video_device:=/dev/video0 _image_width:=640 _image_height:=480 _pixel_format:=mjpeg"
-      ]
+      - /bin/bash
+      - -lc
+      - >-
+        apt-get update &&
+        apt-get install -y --no-install-recommends ros-noetic-usb-cam &&
+        source /opt/ros/noetic/setup.bash &&
+        rosrun usb_cam usb_cam_node
+        _video_device:=/dev/video0
+        _image_width:=1280
+        _image_height:=720
+        _pixel_format:=mjpeg
     profiles: ["webcam"]

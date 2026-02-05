@@ -13,15 +13,18 @@ ROS1 Noetic package integrating YOLOv8 object detection with camera inputs (Open
 # Build image
 docker compose --profile yolo build
 
-# Run with yolo profile
-docker compose --profile yolo up
+# Run modes (choose one):
+docker compose --profile yolo up                    # 基本（トラッキングなし）
+docker compose --profile yolo-tracking up           # トラッキング有効
+docker compose --profile yolo-display up            # OpenCV表示（デバッグ用）
+docker compose --profile yolo-tracking-display up   # トラッキング + OpenCV表示
 
-# Run with webcam profile (USB camera + YOLO)
+# With USB camera:
 docker compose --profile yolo --profile webcam up
+docker compose --profile yolo-tracking --profile webcam up
 
-# Run with direct camera capture and OpenCV display (debugging)
+# Note: OpenCV display modes require X11 access
 xhost +local:docker
-docker compose --profile yolo run --rm yolo26_ros1 bash -lc "roslaunch yolo26_ros1 yolo26.launch model:=/models/yolo26n.pt cv_display:=true direct_camera:=true"
 ```
 
 ### Inside Container (Manual Build)

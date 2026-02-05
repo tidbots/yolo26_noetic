@@ -29,11 +29,23 @@ docker compose --profile yolo build
 ## 実行
 
 ```bash
-# 基本（外部の画像トピックが必要）
+# 基本モード（トラッキングなし、外部の画像トピックが必要）
 docker compose --profile yolo up
+
+# トラッキング有効モード
+docker compose --profile yolo-tracking up
+
+# OpenCV表示モード（デバッグ用、直接カメラキャプチャ）
+xhost +local:docker
+docker compose --profile yolo-display up
+
+# トラッキング + OpenCV表示モード
+xhost +local:docker
+docker compose --profile yolo-tracking-display up
 
 # USBカメラと一緒に実行
 docker compose --profile yolo --profile webcam up
+docker compose --profile yolo-tracking --profile webcam up
 ```
 
 ## 起動引数

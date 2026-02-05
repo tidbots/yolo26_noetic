@@ -29,11 +29,23 @@ docker compose --profile yolo build
 ## Run
 
 ```bash
-# Basic (requires external image topic)
+# Basic mode (no tracking, requires external image topic)
 docker compose --profile yolo up
+
+# Tracking enabled mode
+docker compose --profile yolo-tracking up
+
+# OpenCV display mode (for debugging, direct camera capture)
+xhost +local:docker
+docker compose --profile yolo-display up
+
+# Tracking + OpenCV display mode
+xhost +local:docker
+docker compose --profile yolo-tracking-display up
 
 # With USB camera
 docker compose --profile yolo --profile webcam up
+docker compose --profile yolo-tracking --profile webcam up
 ```
 
 ## Launch Arguments
