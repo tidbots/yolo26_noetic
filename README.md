@@ -1,74 +1,95 @@
 # yolo26_noetic
 
-ROS1 Noetic package for YOLOv8 object detection with ByteTrack/BotSort tracking support.
+YOLOv8物体検出とByteTrack/BotSortトラッキングをサポートするROS1 Noeticパッケージです。
 
-## Features
+## 機能
 
-- YOLOv8 object detection via Ultralytics
-- ByteTrack/BotSort object tracking
-- Bounding box smoothing (moving average)
-- Hysteresis filtering (appear/disappear thresholds)
-- Detection2DArray (vision_msgs) output
-- Compressed image transport support
-- GPU acceleration with Docker
+- Ultralyticsを使用したYOLOv8物体検出
+- ByteTrack/BotSortによるオブジェクトトラッキング
+- バウンディングボックスのスムージング（移動平均）
+- ヒステリシスフィルタリング（出現/消失の閾値）
+- Detection2DArray（vision_msgs）出力
+- 圧縮画像転送のサポート
+- OpenCVによる直接カメラキャプチャ
+- OpenCVウィンドウによるデバッグ表示
+- DockerによるGPUアクセラレーション
 
-## Requirements
+## 必要条件
 
 - Docker & Docker Compose
-- NVIDIA GPU with drivers installed
+- NVIDIAドライバがインストールされたNVIDIA GPU
 - nvidia-container-toolkit
 
-## Build
+## ビルド
 
 ```bash
 docker compose --profile yolo build
 ```
 
-## Run
+## 実行
 
 ```bash
-# Basic (requires external image topic)
+# 基本（外部の画像トピックが必要）
 docker compose --profile yolo up
 
-# With USB camera
+# USBカメラと一緒に実行
 docker compose --profile yolo --profile webcam up
 ```
 
-## Launch Arguments
+## 起動引数
 
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `model` | env YOLO_MODEL | Path to .pt weights |
-| `image` | /camera/image_raw | Input image topic |
-| `device` | 0 | GPU device or "cpu" |
-| `conf` | 0.25 | Confidence threshold |
-| `tracking` | false | Enable ByteTrack |
-| `smoothing` | 15 | Smoothing window (frames) |
-| `appear_frames` | 3 | Frames to confirm appearance |
-| `disappear_frames` | 5 | Frames to confirm disappearance |
+| 引数 | デフォルト | 説明 |
+|------|-----------|------|
+| `model` | 環境変数 YOLO_MODEL | .pt重みファイルのパス |
+| `image` | /camera/image_raw | 入力画像トピック |
+| `device` | 0 | GPUデバイスまたは"cpu" |
+| `conf` | 0.25 | 信頼度の閾値 |
+| `tracking` | false | ByteTrackを有効化 |
+| `smoothing` | 15 | スムージングウィンドウ（フレーム数） |
+| `appear_frames` | 3 | 出現確認に必要なフレーム数 |
+| `disappear_frames` | 5 | 消失確認に必要なフレーム数 |
+| `cv_display` | false | OpenCVウィンドウ表示 |
+| `direct_camera` | false | OpenCVで直接カメラキャプチャ |
+| `camera_device` | /dev/video0 | カメラデバイス |
+| `camera_width` | 1280 | カメラ解像度（幅） |
+| `camera_height` | 720 | カメラ解像度（高さ） |
 
-### Example with tracking
+### トラッキング有効時の例
 
 ```bash
-docker compose --profile yolo run --rm yolo26_ros1 bash -lc \
-  "roslaunch yolo26_ros1 yolo26.launch model:=/models/best.pt tracking:=true"
+docker compose --profile yolo run --rm yolo26_ros1 bash -lc "roslaunch yolo26_ros1 yolo26.launch model:=/models/yolo26n.pt tracking:=true"
 ```
 
-## Topics
+### OpenCVウィンドウ表示（デバッグ用）
 
-### Subscriptions
+直接カメラキャプチャとOpenCVウィンドウ表示を有効にして実行：
+
+```bash
+# X11アクセスを許可
+xhost +local:docker
+
+# 実行
+docker compose --profile yolo run --rm yolo26_ros1 bash -lc "roslaunch yolo26_ros1 yolo26.launch model:=/models/yolo26n.pt cv_display:=true direct_camera:=true"
+```
+
+- `q`キーまたは`ESC`キーでノードを終了できます
+- X11転送が必要です（`xhost +local:docker`を事前に実行）
+
+## トピック
+
+### 購読トピック
 - `/camera/image_raw` (sensor_msgs/Image)
 
-### Publications
+### 配信トピック
 - `/yolo26/detections` (vision_msgs/Detection2DArray)
 - `/yolo26/debug_image` (sensor_msgs/Image)
 
-## Model Weights
+## モデルの重みファイル
 
-Place your model weights in `./models/` directory:
-- `best.pt` - Your trained model
-- `classes.yaml` - Class name mapping
+`./models/`ディレクトリにモデルの重みファイルを配置してください：
+- `yolo26n.pt` - YOLOv8nモデル（デフォルト）
+- `classes.yaml` - クラス名のマッピング
 
-## License
+## ライセンス
 
 Apache 2.0

@@ -6,6 +6,8 @@ detections_topic: "/yolo26/detections"
 debug_image_topic: "/yolo26/debug_image"
 image_transport: "raw"          # "raw" or "compressed"
 publish_debug_image: true
+enable_cv_display: false        # OpenCVウィンドウで表示 (デバッグ用)
+cv_window_name: "YOLO26 Detection"
 
 # ---- Model ----
 model_path: ""                  # /models/best.pt など

@@ -1,9 +1,19 @@
 <launch>
-  <!-- Arguments -->
+  <!-- USB Camera Arguments -->
   <arg name="video_device" default="/dev/video0"/>
-  <arg name="image_width" default="640"/>
-  <arg name="image_height" default="480"/>
+  <arg name="image_width" default="1280"/>
+  <arg name="image_height" default="720"/>
   <arg name="pixel_format" default="mjpeg"/>
+
+  <!-- YOLO Arguments (pass-through) -->
+  <arg name="model" default="$(optenv YOLO_MODEL )"/>
+  <arg name="device" default="$(optenv YOLO_DEVICE 0)"/>
+  <arg name="conf" default="0.25"/>
+  <arg name="tracking" default="false"/>
+  <arg name="smoothing" default="15"/>
+  <arg name="appear_frames" default="3"/>
+  <arg name="disappear_frames" default="5"/>
+  <arg name="cv_display" default="false"/>
 
   <!-- USB Camera -->
   <node pkg="usb_cam" type="usb_cam_node" name="usb_cam" output="screen">
@@ -12,10 +22,20 @@
     <param name="image_height" value="$(arg image_height)"/>
     <param name="pixel_format" value="$(arg pixel_format)"/>
     <param name="camera_frame_id" value="usb_cam"/>
+    <param name="io_method" value="mmap"/>
+    <param name="framerate" value="30"/>
   </node>
 
   <!-- YOLO with tracking support -->
   <include file="$(find yolo26_ros1)/launch/yolo26.launch">
     <arg name="image" value="/usb_cam/image_raw"/>
+    <arg name="model" value="$(arg model)"/>
+    <arg name="device" value="$(arg device)"/>
+    <arg name="conf" value="$(arg conf)"/>
+    <arg name="tracking" value="$(arg tracking)"/>
+    <arg name="smoothing" value="$(arg smoothing)"/>
+    <arg name="appear_frames" value="$(arg appear_frames)"/>
+    <arg name="disappear_frames" value="$(arg disappear_frames)"/>
+    <arg name="cv_display" value="$(arg cv_display)"/>
   </include>
 </launch>

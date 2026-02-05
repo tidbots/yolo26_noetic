@@ -14,6 +14,14 @@
   <arg name="debug_image" default="/yolo26/debug_image"/>
   <arg name="transport" default="raw"/>
   <arg name="publish_debug" default="true"/>
+  <arg name="cv_display" default="false"/>
+  <arg name="cv_window_name" default="YOLO26 Detection"/>
+
+  <!-- Direct Camera Capture (bypass usb_cam) -->
+  <arg name="direct_camera" default="false"/>
+  <arg name="camera_device" default="/dev/video0"/>
+  <arg name="camera_width" default="1280"/>
+  <arg name="camera_height" default="720"/>
 
   <!-- Labels -->
   <arg name="classes_yaml" default=""/>
@@ -45,6 +53,14 @@
     <param name="debug_image_topic" value="$(arg debug_image)"/>
     <param name="image_transport" value="$(arg transport)"/>
     <param name="publish_debug_image" value="$(arg publish_debug)"/>
+    <param name="enable_cv_display" value="$(arg cv_display)"/>
+    <param name="cv_window_name" value="$(arg cv_window_name)"/>
+
+    <!-- Direct Camera -->
+    <param name="use_direct_camera" value="$(arg direct_camera)"/>
+    <param name="camera_device" value="$(arg camera_device)"/>
+    <param name="camera_width" value="$(arg camera_width)"/>
+    <param name="camera_height" value="$(arg camera_height)"/>
 
     <!-- Labels -->
     <param name="classes_yaml" value="$(arg classes_yaml)"/>

@@ -1,9 +1,27 @@
 <launch>
+  <!-- YOLO Arguments (pass-through) -->
+  <arg name="model" default="$(optenv YOLO_MODEL )"/>
+  <arg name="device" default="$(optenv YOLO_DEVICE 0)"/>
+  <arg name="conf" default="0.25"/>
+  <arg name="tracking" default="false"/>
+  <arg name="smoothing" default="15"/>
+  <arg name="appear_frames" default="3"/>
+  <arg name="disappear_frames" default="5"/>
+  <arg name="cv_display" default="false"/>
+
   <!-- Xtion Pro Live via OpenNI2 -->
   <include file="$(find openni2_launch)/launch/openni2.launch" />
 
   <!-- YOLO with tracking support -->
   <include file="$(find yolo26_ros1)/launch/yolo26.launch">
     <arg name="image" value="/camera/rgb/image_raw"/>
+    <arg name="model" value="$(arg model)"/>
+    <arg name="device" value="$(arg device)"/>
+    <arg name="conf" value="$(arg conf)"/>
+    <arg name="tracking" value="$(arg tracking)"/>
+    <arg name="smoothing" value="$(arg smoothing)"/>
+    <arg name="appear_frames" value="$(arg appear_frames)"/>
+    <arg name="disappear_frames" value="$(arg disappear_frames)"/>
+    <arg name="cv_display" value="$(arg cv_display)"/>
   </include>
 </launch>

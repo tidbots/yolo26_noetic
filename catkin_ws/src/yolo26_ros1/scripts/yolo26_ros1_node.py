@@ -124,6 +124,8 @@ class Yolo26Ros1Node:
         self.debug_image_topic = rospy.get_param("~debug_image_topic", "/yolo26/debug_image")
         self.image_transport = rospy.get_param("~image_transport", "raw")  # raw / compressed
         self.publish_debug_image = rospy.get_param("~publish_debug_image", True)
+        self.enable_cv_display = rospy.get_param("~enable_cv_display", False)
+        self.cv_window_name = rospy.get_param("~cv_window_name", "YOLO26 Detection")
 
         self.model_path = rospy.get_param("~model_path", os.environ.get("YOLO_MODEL", ""))
         self.device = rospy.get_param("~device", os.environ.get("YOLO_DEVICE", "0"))
@@ -137,6 +139,13 @@ class Yolo26Ros1Node:
 
         self.process_rate_hz = float(rospy.get_param("~process_rate_hz", 15.0))
         self.process_period_s = 1.0 / max(self.process_rate_hz, 0.1)
+
+        # Direct camera capture (bypass ROS image topic)
+        self.use_direct_camera = rospy.get_param("~use_direct_camera", False)
+        self.camera_device = rospy.get_param("~camera_device", "/dev/video0")
+        self.camera_width = int(rospy.get_param("~camera_width", 1280))
+        self.camera_height = int(rospy.get_param("~camera_height", 720))
+        self._cap = None
 
         # Tracking parameters
         self.enable_tracking = rospy.get_param("~enable_tracking", False)
@@ -165,8 +174,11 @@ class Yolo26Ros1Node:
         self._latest_header: Optional[Header] = None
         self._last_infer_ts = 0.0
 
-        # Subscribe raw or compressed
-        if self.image_transport.lower() == "compressed":
+        # Subscribe raw or compressed, or use direct camera capture
+        if self.use_direct_camera:
+            self._init_direct_camera()
+            rospy.loginfo(f"Direct camera capture: {self.camera_device} ({self.camera_width}x{self.camera_height})")
+        elif self.image_transport.lower() == "compressed":
             topic = self.image_topic.rstrip("/") + "/compressed"
             self.sub_img = rospy.Subscriber(topic, CompressedImage, self._cb_compressed, queue_size=1, buff_size=2**24)
             rospy.loginfo(f"Subscribe: {topic} (sensor_msgs/CompressedImage)")
@@ -177,10 +189,41 @@ class Yolo26Ros1Node:
         # Timer inference loop
         self.timer = rospy.Timer(rospy.Duration(self.process_period_s), self._on_timer)
 
+        # OpenCV display setup
+        self._display_img = None
+        if self.enable_cv_display:
+            rospy.on_shutdown(self._cleanup_cv_window)
+            rospy.loginfo(f"OpenCV display enabled: {self.cv_window_name}")
+
         tracking_info = f"rate={self.process_rate_hz}Hz, tracking={self.enable_tracking}"
         if self.enable_tracking:
             tracking_info += f" (tracker={self.tracker}, smoothing={self.smoothing_window}, appear={self.appear_frames}, disappear={self.disappear_frames})"
         rospy.loginfo(f"yolo26_ros1 node started. {tracking_info}")
+
+    def _cleanup_cv_window(self) -> None:
+        """Cleanup OpenCV window on shutdown."""
+        if self.enable_cv_display:
+            cv2.destroyAllWindows()
+        if self._cap is not None:
+            self._cap.release()
+
+    def _init_direct_camera(self) -> None:
+        """Initialize direct camera capture with OpenCV."""
+        self._cap = cv2.VideoCapture(self.camera_device, cv2.CAP_V4L2)
+        if not self._cap.isOpened():
+            rospy.logerr(f"Failed to open camera: {self.camera_device}")
+            return
+
+        # Set MJPEG format
+        self._cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_width)
+        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_height)
+        self._cap.set(cv2.CAP_PROP_FPS, 30)
+
+        # Verify settings
+        actual_w = int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        actual_h = int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        rospy.loginfo(f"Camera opened: {actual_w}x{actual_h}")
 
     def _load_model(self, model_path: str):
         if not model_path:
@@ -239,10 +282,21 @@ class Yolo26Ros1Node:
             self._latest_header = msg.header
 
     def _on_timer(self, event) -> None:
-        # Throttle if no frame
-        with self._lock:
-            frame = None if self._latest_frame is None else self._latest_frame.copy()
-            header = self._latest_header
+        # Direct camera capture mode
+        if self.use_direct_camera:
+            if self._cap is None or not self._cap.isOpened():
+                return
+            ret, frame = self._cap.read()
+            if not ret or frame is None:
+                return
+            header = Header()
+            header.stamp = rospy.Time.now()
+            header.frame_id = "camera"
+        else:
+            # Throttle if no frame
+            with self._lock:
+                frame = None if self._latest_frame is None else self._latest_frame.copy()
+                header = self._latest_header
 
         if frame is None or header is None:
             return
@@ -266,6 +320,11 @@ class Yolo26Ros1Node:
                 self.pub_dbg.publish(img_msg)
             except Exception as e:
                 rospy.logwarn_throttle(2.0, f"publish debug image failed: {e}")
+
+        # Store image for display in main thread
+        if self.enable_cv_display:
+            display_img = dbg_img if dbg_img is not None else frame
+            self._display_img = display_img.copy()
 
     def _class_id_to_label(self, cls_id: int) -> str:
         if self.use_class_names and self.class_map and cls_id in self.class_map:
@@ -427,8 +486,10 @@ class Yolo26Ros1Node:
                     continue
 
             det = Detection2D()
-            det.header = header
-            det.id = str(track_id) if track_id >= 0 else ""
+            det.header = Header()
+            det.header.stamp = header.stamp
+            # Store tracking ID in frame_id (ROS1 Detection2D has no 'id' field)
+            det.header.frame_id = str(track_id) if track_id >= 0 else ""
 
             bbox = BoundingBox2D()
             bbox.center = Pose2D(x=final_cx, y=final_cy, theta=0.0)
@@ -437,8 +498,9 @@ class Yolo26Ros1Node:
             det.bbox = bbox
 
             hyp = ObjectHypothesisWithPose()
-            hyp.hypothesis.class_id = self._class_id_to_label(final_class)
-            hyp.hypothesis.score = final_conf
+            # ROS1 vision_msgs: id is int64, score is float64 (no nested hypothesis)
+            hyp.id = final_class
+            hyp.score = final_conf
             det.results.append(hyp)
 
             det_arr.detections.append(det)
@@ -471,10 +533,23 @@ class Yolo26Ros1Node:
 def main():
     rospy.init_node("yolo26_ros1_node")
     node = Yolo26Ros1Node()
-    try:
-        rospy.spin()
-    except KeyboardInterrupt:
-        pass
+
+    if node.enable_cv_display:
+        # Run display loop in main thread
+        rate = rospy.Rate(30)  # 30Hz display update
+        while not rospy.is_shutdown():
+            if hasattr(node, '_display_img') and node._display_img is not None:
+                cv2.imshow(node.cv_window_name, node._display_img)
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord('q') or key == 27:
+                    rospy.signal_shutdown("User quit")
+                    break
+            rate.sleep()
+    else:
+        try:
+            rospy.spin()
+        except KeyboardInterrupt:
+            pass
 
 
 if __name__ == "__main__":

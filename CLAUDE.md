@@ -11,7 +11,7 @@ ROS1 Noetic package integrating YOLOv8 object detection with camera inputs (Open
 ### Docker (Primary Method)
 ```bash
 # Build image
-docker compose build
+docker compose --profile yolo build
 
 # Run with yolo profile
 docker compose --profile yolo up
@@ -19,9 +19,9 @@ docker compose --profile yolo up
 # Run with webcam profile (USB camera + YOLO)
 docker compose --profile yolo --profile webcam up
 
-# Run with tracking enabled
-docker compose --profile yolo run --rm yolo26_ros1 bash -lc \
-  "roslaunch yolo26_ros1 yolo26.launch model:=/models/best.pt tracking:=true"
+# Run with direct camera capture and OpenCV display (debugging)
+xhost +local:docker
+docker compose --profile yolo run --rm yolo26_ros1 bash -lc "roslaunch yolo26_ros1 yolo26.launch model:=/models/yolo26n.pt cv_display:=true direct_camera:=true"
 ```
 
 ### Inside Container (Manual Build)
@@ -41,12 +41,20 @@ source devel/setup.bash
 ```bash
 # Example with tracking
 roslaunch yolo26_ros1 yolo26.launch \
-  model:=/models/best.pt \
+  model:=/models/yolo26n.pt \
   image:=/camera/image_raw \
   tracking:=true \
   smoothing:=15 \
   appear_frames:=3 \
   disappear_frames:=5
+
+# Example with direct camera and OpenCV display
+roslaunch yolo26_ros1 yolo26.launch \
+  model:=/models/yolo26n.pt \
+  cv_display:=true \
+  direct_camera:=true \
+  camera_width:=1280 \
+  camera_height:=720
 ```
 
 ## Architecture
@@ -76,6 +84,8 @@ catkin_ws/src/yolo26_ros1/
 - Hysteresis filtering (appear/disappear frame thresholds)
 - Class locking after track confirmation
 - Supports raw and compressed image transport
+- Direct camera capture with OpenCV (bypasses ROS image topics)
+- OpenCV window display for debugging (press 'q' or ESC to exit)
 
 ### ROS Parameters
 
@@ -93,6 +103,12 @@ catkin_ws/src/yolo26_ros1/
 | `~disappear_frames` | 5 | Frames to confirm disappearance |
 | `~image_transport` | "raw" | "raw" or "compressed" |
 | `~classes_yaml` | "" | Path to class names YAML |
+| `~enable_cv_display` | false | Show OpenCV window (debug) |
+| `~cv_window_name` | "YOLO26 Detection" | OpenCV window title |
+| `~use_direct_camera` | false | Direct camera capture with OpenCV |
+| `~camera_device` | "/dev/video0" | Camera device path |
+| `~camera_width` | 1280 | Camera resolution width |
+| `~camera_height` | 720 | Camera resolution height |
 
 ### TrackState Class
 
@@ -110,3 +126,4 @@ Manages per-object tracking state:
 - Class names: `./models/classes.yaml`
 - Uses `buff_size=2**24` on subscriber to prevent message drops
 - Timer-based inference decouples image receipt from processing
+- OpenCV display must run in main thread (not timer callback) for proper X11 support in Docker
